@@ -12,7 +12,7 @@ const starContainerStyle = {
 
 function StarRating({
   maxRating = 5,
-  color = "#000",
+  color = "#d3eb1cff",
   size = 48,
   onHandleRating,
 }) {
