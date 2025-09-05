@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const tempMovieData = [
   {
@@ -217,9 +217,49 @@ function Main({ children }) {
   return <main className="main">{children}</main>;
 }
 
+function Loader() {
+  return <p className="loader">Loading...</p>;
+}
+
+function ErrorMessage({ message }) {
+  return (
+    <p className="error">
+      <span>⛔</span> {message}
+    </p>
+  );
+}
+
+const OMDB_KEY = "cfb2cad3";
+
 export default function App() {
-  const [movies, setMovies] = useState(tempMovieData);
-  const [watched, setWatched] = useState(tempWatchedData);
+  const [movies, setMovies] = useState([]);
+  const [watched, setWatched] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const movieName = "asacascasc";
+
+  useEffect(function () {
+    async function loadMovies() {
+      try {
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${movieName}`
+        );
+
+        if (!res.ok)
+          throw new Error("Something went wrong with fetching movies.");
+        const data = await res.json();
+        if (data.Response === "False") throw new Error("Movie not found.");
+        setMovies(data.Search);
+      } catch (error) {
+        console.log(error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadMovies();
+  }, []);
 
   return (
     <>
@@ -229,7 +269,16 @@ export default function App() {
       </NavBar>
       <Main>
         <Box>
-          <MovieList movies={movies} />
+          {/* {isLoading ? (
+            <Loader />
+          ) : error ? (
+            <ErrorMessage message={error} />
+          ) : (
+            <MovieList movies={movies} />
+          )} */}
+          {isLoading && <Loader />}
+          {!isLoading && !error && <MovieList movies={movies} />}
+          {error && <ErrorMessage message={error} />}
         </Box>
         <Box>
           <WatchedSummary watched={watched} />
