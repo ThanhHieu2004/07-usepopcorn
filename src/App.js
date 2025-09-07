@@ -290,6 +290,22 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     [title]
   );
 
+  useEffect(
+    function () {
+      function callback(e) {
+        if (e.code === "Escape") {
+          onCloseMovie();
+        }
+      }
+      document.addEventListener("keydown", callback);
+
+      return function () {
+        document.removeEventListener("keydown", callback);
+      };
+    },
+    [onCloseMovie]
+  );
+
   function handleAddWatched() {
     const newWatchedMovie = {
       imdbID: selectedId,
@@ -385,8 +401,6 @@ export default function App() {
   function handleDeleteWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.id !== id));
   }
-
-  useEffect(function (e) {}, []);
 
   useEffect(
     function () {
