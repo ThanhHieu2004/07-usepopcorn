@@ -386,14 +386,18 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.id !== id));
   }
 
+  useEffect(function (e) {}, []);
+
   useEffect(
     function () {
+      const controller = new AbortController();
       async function loadMovies() {
         try {
           setError("");
           setIsLoading(true);
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${query}`,
+            { signal: controller.signal }
           );
 
           if (!res.ok)
@@ -401,9 +405,12 @@ export default function App() {
           const data = await res.json();
           if (data.Response === "False") throw new Error("Movie not found.");
           setMovies(data.Search);
+          setError("");
         } catch (error) {
           console.log(error);
-          setError(error.message);
+          if (error.name !== "AbortError") {
+            setError(error.message);
+          }
         } finally {
           setIsLoading(false);
         }
@@ -415,6 +422,9 @@ export default function App() {
         return;
       }
       loadMovies();
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   );
