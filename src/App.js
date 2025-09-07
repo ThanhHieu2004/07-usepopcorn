@@ -435,6 +435,7 @@ export default function App() {
         setError("");
         return;
       }
+      handleCloseMovie();
       loadMovies();
       return function () {
         controller.abort();
