@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating";
+import { useMovies } from "./useMovies";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKey } from "./useKey";
 
 const tempMovieData = [
   {
@@ -72,22 +75,28 @@ function Logo() {
 function SearchBar({ query, setQuery }) {
   const inputRef = useRef(null);
 
-  useEffect(
-    function () {
-      function callback(e) {
-        if (document.activeElement === inputRef.current) return;
+  useKey("Enter", function () {
+    if (document.activeElement === inputRef.current) return;
+    inputRef.current.focus();
+    setQuery("");
+  });
 
-        if (e.code === "Enter") {
-          inputRef.current.focus();
-          setQuery("");
-        }
-      }
+  // useEffect(
+  //   function () {
+  //     function callback(e) {
+  //       if (document.activeElement === inputRef.current) return;
 
-      document.addEventListener("keydown", callback);
-      return () => document.removeEventListener("keydown", callback); // Clean-up function (when the component unmounted)
-    },
-    [setQuery]
-  );
+  //       if (e.code === "Enter") {
+  //         inputRef.current.focus();
+  //         setQuery("");
+  //       }
+  //     }
+
+  //     document.addEventListener("keydown", callback);
+  //     return () => document.removeEventListener("keydown", callback); // Clean-up function (when the component unmounted)
+  //   },
+  //   [setQuery]
+  // );
 
   return (
     <input
@@ -258,6 +267,8 @@ function ErrorMessage({ message }) {
   );
 }
 
+const OMDB_KEY = "cfb2cad3";
+
 function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const [movie, setMovie] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -318,21 +329,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     [userRating]
   );
 
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-        }
-      }
-      document.addEventListener("keydown", callback);
-
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+  useKey("Escape", onCloseMovie);
 
   function handleAddWatched() {
     const newWatchedMovie = {
@@ -405,18 +402,10 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   );
 }
 
-const OMDB_KEY = "cfb2cad3";
-
 export default function App() {
-  const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
-  const [watched, setWatched] = useState(function () {
-    const storedValue = localStorage.getItem("watched");
-    return JSON.parse(storedValue) || [];
-  });
+  const [watched, setWatched] = useLocalStorageState([], "watched");
 
   function handleSelectMovie(id) {
     setSelectedId((selectedId) => (selectedId === id ? null : id));
@@ -435,54 +424,7 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  useEffect(
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
-
-  useEffect(
-    function () {
-      const controller = new AbortController();
-      async function loadMovies() {
-        try {
-          setError("");
-          setIsLoading(true);
-          const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${OMDB_KEY}&s=${query}`,
-            { signal: controller.signal }
-          );
-
-          if (!res.ok)
-            throw new Error("Something went wrong with fetching movies.");
-          const data = await res.json();
-          if (data.Response === "False") throw new Error("Movie not found.");
-          setMovies(data.Search);
-          setError("");
-        } catch (error) {
-          console.log(error);
-          if (error.name !== "AbortError") {
-            setError(error.message);
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      if (query.length < 3) {
-        setIsLoading(false);
-        setMovies([]);
-        setError("");
-        return;
-      }
-      handleCloseMovie();
-      loadMovies();
-      return function () {
-        controller.abort();
-      };
-    },
-    [query]
-  );
+  const { movies, isLoading, error } = useMovies(query, handleCloseMovie);
 
   return (
     <>
